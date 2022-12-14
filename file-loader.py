@@ -124,6 +124,7 @@ def add_record(engine, rec_to_add, with_info):
         return info_response.decode()
     else:
         engine.addRecord(data_source, record_id, rec_to_add)
+        return None
 
 
 def get_redo_records(engine, quantity):
@@ -151,6 +152,7 @@ def process_redo_record(engine, record, with_info):
         return with_info_response.decode()
     else:
         engine.processRedoRecord(record)
+        return None
 
 
 def record_stats(success_recs, error_recs, prev_time, operation):
@@ -487,7 +489,7 @@ if __name__ == '__main__':
     except IOError as ex:
         if run_in_container:
             print(ex)
-            print(f'\nWhen running in a container, both /input and /output must be mounted to the host system.')
+            print('\nWhen running in a container, both /input and /output must be mounted to the host system.')
             print('Example: docker run -it --rm -u $UID -v ${PWD}:/input -v ${PWD}:/output -e SENZING_ENGINE_CONFIGURATION_JSON  senzing/{module_name} -f /input/load_file.json')
             sys.exit(-1)
         else:
@@ -500,7 +502,7 @@ if __name__ == '__main__':
     if not engine_config:
         logger.warning('SENZING_ENGINE_CONFIGURATION_JSON environment variable or --configJson CLI argument must be set with the engine configuration JSON')
         logger.warning('https://senzing.zendesk.com/hc/en-us/articles/360038774134-G2Module-Configuration-and-the-Senzing-API')
-        exit(-1)
+        sys.exit(-1)
 
     # Check if running in a container and errors or with info file has been specified. Can't be modified in a container.
     if run_in_container:
