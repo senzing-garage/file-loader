@@ -1,13 +1,11 @@
-ARG BASE_IMAGE=debian:11.5-slim@sha256:e8ad0bc7d0ee6afd46e904780942033ab83b42b446b58efa88d31ecf3adf4678
+ARG BASE_IMAGE=senzing/senzingapi-runtime 
 FROM ${BASE_IMAGE}
 
-ENV REFRESHED_AT=2022-10-27
+ENV REFRESHED_AT=2022-12-13
 
-LABEL Name="senzing/file-loader" \
+LABEL Name="senzing/SzFileLoader" \
       Maintainer="support@senzing.com" \
-      Version="1.0.0"
-
-HEALTHCHECK CMD ["/app/healthcheck.sh"]
+      Version="0.0.2"
 
 # Run as "root" for system installation.
 
@@ -15,31 +13,46 @@ USER root
 
 # Install packages via apt.
 
-RUN apt-get update \
- && apt-get -y install \
-      less \
+RUN apt update \
+ && apt -y install \
+      curl \
       python3 \
       python3-pip \
+ && apt clean \
  && rm -rf /var/lib/apt/lists/*
 
-# Install packages via PIP.
+# Install packages via pip.
 
-COPY requirements.txt ./
+COPY requirements.txt .
 RUN pip3 install --upgrade pip \
  && pip3 install -r requirements.txt \
  && rm requirements.txt
 
-# Install packages via apt.
+# Install senzing_governor.py.
+
+RUN curl -X GET \
+         --output /opt/senzing/g2/sdk/python/senzing_governor.py \
+         https://raw.githubusercontent.com/Senzing/governor-postgresql-transaction-id/main/senzing_governor.py
 
 # Copy files from repository.
 
-COPY ./rootfs /
+COPY ./file-loader.py /
+
+# Create path to mount to for input data and output data to persist
+
+RUN mkdir /input /output
 
 # Make non-root container.
 
 USER 1001
 
-# Runtime execution.
+# Runtime environment variables.
 
-WORKDIR /app
-CMD ["/app/sleep-infinity.sh"]
+ENV LD_LIBRARY_PATH=/opt/senzing/g2/lib:/opt/senzing/g2/lib/debian
+ENV PATH=${PATH}:/opt/senzing/g2/python
+ENV PYTHONPATH=/opt/senzing/g2/sdk/python
+ENV PYTHONUNBUFFERED=1
+ENV SENZING_DOCKER_LAUNCHED=true
+
+WORKDIR /
+ENTRYPOINT ["/file-loader.py"]
