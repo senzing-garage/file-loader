@@ -49,8 +49,8 @@ def arg_convert_boolean(env_var, cli_arg):
             if evar.lower() in ['true', '1', 't', 'y', 'yes']:
                 return True
             return False
-        else:
-            return evar
+
+        return evar
 
     return cli_arg
 
@@ -109,7 +109,7 @@ def startup_info(engine, diag, product, configmgr):
     logger.info(f'Contract:    {lic_info["contract"]}')
     logger.info('')
 
-    return True if 'postgres' in uniq_db_type else False
+    return bool('postgresql' in uniq_db_type)
 
 
 def add_record(engine, rec_to_add, with_info):
@@ -122,9 +122,9 @@ def add_record(engine, rec_to_add, with_info):
         info_response = bytearray()
         engine.addRecordWithInfo(data_source, record_id, rec_to_add, info_response)
         return info_response.decode()
-    else:
-        engine.addRecord(data_source, record_id, rec_to_add)
-        return None
+
+    engine.addRecord(data_source, record_id, rec_to_add)
+    return None
 
 
 def get_redo_records(engine, quantity):
@@ -150,9 +150,9 @@ def process_redo_record(engine, record, with_info):
         with_info_response = bytearray()
         engine.processRedoRecordWithInfo(record, with_info_response)
         return with_info_response.decode()
-    else:
-        engine.processRedoRecord(record)
-        return None
+
+    engine.processRedoRecord(record)
+    return None
 
 
 def record_stats(success_recs, error_recs, prev_time, operation):
@@ -536,6 +536,8 @@ if __name__ == '__main__':
     # If the database is Postgres import the governor
     db_is_postgres = startup_info(sz_engine, sz_diag, sz_product, sz_configmgr)
     if db_is_postgres:
+        logger.info('Postgres detected, loading the Senzing governor')
+        logger.info('')
         senzing_governor = importlib.import_module("senzing_governor")
         gov = senzing_governor.Governor(hint="SzLoader")
 
