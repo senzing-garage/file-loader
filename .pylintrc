@@ -12,9 +12,9 @@ disable=
     missing-class-docstring,
     missing-function-docstring,
     missing-module-docstring,
-    no-self-use,
     protected-access,
     redefined-outer-name,
+    simplifiable-if-statement,
     too-few-public-methods,
     too-many-arguments,
     too-many-branches,
@@ -23,6 +23,7 @@ disable=
     too-many-locals,
     too-many-nested-blocks,
     too-many-statements,
+    unspecified-encoding,
     unused-argument,
 good-names=
     template-python
