@@ -38,6 +38,10 @@ RUN curl -X GET \
 
 COPY ./file-loader.py /
 
+# Copy files from repository.
+
+COPY ./rootfs /
+
 # Create path to mount to for input data and output data to persist
 
 RUN mkdir /input /output
