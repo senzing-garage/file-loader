@@ -20,9 +20,9 @@ except ModuleNotFoundError:
     import json
 
 __all__ = []
-__version__ = '1.0.0'  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = '1.0.1'  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2022-11-29'
-__updated__ = '2022-12-14'
+__updated__ = '2022-12-15'
 
 
 # Custom actions for argparse. Enables checking if an arg "was specified" on the CLI to check if CLI args should take
@@ -490,7 +490,7 @@ if __name__ == '__main__':
         if run_in_container:
             print(ex)
             print('\nWhen running in a container, both /input and /output must be mounted to the host system.')
-            print('Example: docker run -it --rm -u $UID -v ${PWD}:/input -v ${PWD}:/output -e SENZING_ENGINE_CONFIGURATION_JSON  senzing/{module_name} -f /input/load_file.json')
+            print(f'Example: docker run -it --rm -u $UID -v ${{PWD}}:/input -v ${{PWD}}:/output -e SENZING_ENGINE_CONFIGURATION_JSON  senzing/{module_name} -f /input/load_file.json')
             sys.exit(-1)
         else:
             raise
@@ -514,7 +514,7 @@ if __name__ == '__main__':
 
         if str(pathlib.Path(ingest_file).parent) != '/input':
             logger.error('When running in a container, the input file must be specified as /input/<file_name> and mounted to /input')
-            logger.error('Example: docker run -it --rm -u $UID -v ${PWD}:/input -v ${PWD}:/output -e SENZING_ENGINE_CONFIGURATION_JSON  senzing/{module_name} -f /input/load_file.json')
+            logger.error(f'Example: docker run -it --rm -u $UID -v ${{PWD}}:/input -v ${{PWD}}:/output -e SENZING_ENGINE_CONFIGURATION_JSON  senzing/{module_name} -f /input/load_file.json')
             sys.exit(-1)
 
     try:
