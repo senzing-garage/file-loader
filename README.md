@@ -6,11 +6,11 @@ file-loader.py is a Python utility to load [Senzing mapped JSON data](https://se
 
 
 ```console
-usage: file-loader.py [-h] [-f [file]] [-cj [config]] [-i] [-t] [-nt num_threads] [-if [file]] [-ef [file]]
+usage: file-loader.py [-h] [-f [file]] [-cj [config]] [-i] [-t] [-nt num_threads]
 
 Utility to load Senzing JSON records and process redo records
 
-options:
+optional arguments:
   -h, --help            show this help message and exit
   -f [file], --file [file]
                         Path and name of file to load.
@@ -40,30 +40,16 @@ options:
                         Default: Calculated based on hardware.
                         Env Var: SENZING_THREADS_PER_PROCESS
                         
-  -if [file], --infoFile [file]
-                        
-                        Path/file to write with info data to.
-                        
-                        Default: file-loader_withInfo_20221208_135944.jsonl
-                        Env Var: SENZING_WITHINFO_FILE
-                        
-  -ef [file], --errorsFile [file]
-                        
-                        Path/file to write errors to.
-                        
-                        Default: file-loader_errors_20221208_135944.log
-                        Env Var: SENZING_ERRORS_FILE
-                        
 
 Arguments can be specified with either CLI arguments or environment variables, some arguments have 
 default values.
-        
+
 The order of precedence for selecting which value to use is:
-        
+
   1) CLI Argument
   2) Environment variable
   3) Default value if available
-  
+
 For additional help and information: https://github.com/Senzing/file-loader/blob/main/README.md
 ```
 
