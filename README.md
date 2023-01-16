@@ -2,11 +2,10 @@
 
  ## Overview
 
-file-loader.py is a Python utility to load [Senzing mapped JSON data](https://senzing.zendesk.com/hc/en-us/articles/231925448-Generic-Entity-Specification), once loading is complete [redo records](https://senzing.zendesk.com/hc/en-us/articles/360007475133-Processing-REDO) are processed. file-loader.py can be run stand alone on a [bare metal Senzing installation](https://senzing.zendesk.com/hc/en-us/articles/115002408867-Quickstart-Guide) or utilized as a Docker container. 
+file-loader.py is a Python utility to load [Senzing mapped JSON data](https://senzing.zendesk.com/hc/en-us/articles/231925448-Generic-Entity-Specification), once loading is complete [redo records](https://senzing.zendesk.com/hc/en-us/articles/360007475133-Processing-REDO) are processed.
 
 
 ```console
-$ ./file-loader.py --help
 usage: file-loader.py [-h] [-f [file]] [-cj [config]] [-i] [-t] [-nt num_threads] [-if [file]] [-ef [file]]
 
 Utility to load Senzing JSON records and process redo records
@@ -126,29 +125,9 @@ docker run -it --rm -u $UID -v ${PWD}:/input -v ${PWD}:/output -e SENZING_ENGINE
 ```
 The above example assumes the customers.json file is in the current path where the command is being executed from.
 
-### Bare Metal Senzing Install
-Export SENZING_ENGINE_CONFIGURATION_JSON, modify /home/senzing/mysenzproj1/ to your Senzing project and modify CONNECTION details to your database.
-
-```console
-export SENZING_ENGINE_CONFIGURATION_JSON='{
-  "PIPELINE": {
-    "CONFIGPATH": "/home/senzing/mysenzproj1/etc",
-    "RESOURCEPATH": "/home/senzing/mysenzproj1/resources",
-    "SUPPORTPATH": "/home/senzing/mysenzproj1/data"
-  },
-  "SQL": {
-    "CONNECTION": "postgresql://senzing:password@myhost:5432:g2"
-  }
-}'
-```
-
-```console
-./file-loader.py -f <file_to_load>
-```
-
 ## Additional Items to Note
 
-- When using Docker `--volume` is used to mount paths to make the input file to load available within the container at `/input`, and an output path on the host to the path `/output`; where the error log and with info response files are written and persisted.
+- Docker `--volume` is used to mount paths to make the input file to load available within the container at `/input`, and an output path on the host to the path `/output`; where the error log and with info response files are written and persisted.
 - The number of threads to use is automatically estimated for loading and processing redo records. If the Senzing database is also running on the same machine and you notice very high CPU load, you can reduce the number of threads with the CLI argument `--numThreads` or the `SENZING_THREADS_PER_PROCESS` environment variable. To know how many threads a run started with look for a similar message during startup:
 
 ```console
