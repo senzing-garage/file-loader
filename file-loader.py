@@ -20,9 +20,9 @@ except ModuleNotFoundError:
     import json
 
 __all__ = []
-__version__ = '1.0.1'  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = '1.1.0'  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2022-11-29'
-__updated__ = '2022-12-15'
+__updated__ = '2023-01-16'
 
 
 # Custom actions for argparse. Enables checking if an arg "was specified" on the CLI to check if CLI args should take
@@ -134,7 +134,7 @@ def get_redo_records(engine, quantity):
         for _ in range(quantity):
             redo_record = bytearray()
             engine.getRedoRecord(redo_record)
-            redo_records.append(redo_record)
+            redo_records.append(redo_record.decode())
     except G2Exception as ex:
         logger.critical(f'Exception: {ex} - Operation: getRedoRecord')
         global do_shutdown
@@ -148,10 +148,10 @@ def process_redo_record(engine, record, with_info):
     """Process a single redo record, returning with info details if --info or SENZING_WITHINFO was specified"""
     if with_info:
         with_info_response = bytearray()
-        engine.processRedoRecordWithInfo(record, with_info_response)
+        engine.processWithInfo(record, with_info_response)
         return with_info_response.decode()
 
-    engine.processRedoRecord(record)
+    engine.process(record)
     return None
 
 
@@ -214,20 +214,22 @@ def load_and_redo(engine, file_input, file_output, file_errors, num_workers, wit
 
     with open(file_output, 'w') as out_file:
         with open(file_input, 'r') as in_file:
+            load_records = 0
             long_check_time = time.time()
 
             # Loader
             with concurrent.futures.ThreadPoolExecutor(num_workers if num_workers else None) as loader:
                 futures = {loader.submit(add_record, engine, record, with_info): (record.strip(), time.time()) for record in itertools.islice(in_file, loader._max_workers)}
                 logger.info(f'Starting to load with {loader._max_workers} threads...')
-                load_records = loader._max_workers
+                load_records += loader._max_workers
+
                 while futures:
                     time_now = time.time()
 
                     if call_governor:
                         check_governor()
 
-                    for f in concurrent.futures.as_completed(futures.keys(), timeout=10):
+                    for f in concurrent.futures.as_completed(futures.keys()):
                         try:
                             result = f.result()
                         except (G2BadInputException, G2RetryableException, json.JSONDecodeError) as ex:
@@ -267,45 +269,53 @@ def load_and_redo(engine, file_input, file_output, file_errors, num_workers, wit
 
             # Redoer
             logger.info('Checking for and processing redo records...')
-            with concurrent.futures.ThreadPoolExecutor(num_workers if num_workers else None) as redoer:
-                futures = {redoer.submit(process_redo_record, engine, record, with_info): (record, time.time()) for record in get_redo_records(engine, redoer._max_workers)}
-                redo_records = redoer._max_workers
-                while futures:
-                    time_now = time.time()
+            redo_records = 0
+            redo_count = engine.countRedoRecords()
 
-                    if call_governor:
-                        check_governor()
+            if redo_count:
+                long_check_time = time.time()
+                with concurrent.futures.ThreadPoolExecutor(num_workers if num_workers else None) as redoer:
+                    futures = {redoer.submit(process_redo_record, engine, record, with_info): (record, time.time()) for record in get_redo_records(engine, redoer._max_workers)}
+                    logger.info(f'Starting to process redo with {redoer._max_workers} threads...')
+                    redo_records += redoer._max_workers
+                    while futures:
+                        time_now = time.time()
 
-                    for f in concurrent.futures.as_completed(futures.keys()):
-                        try:
-                            result = f.result()
-                            redo_record = get_redo_records(engine, 1)
-                        except (G2BadInputException, G2RetryableException, json.JSONDecodeError) as ex:
-                            logger.error(f'Exception: {ex} - Operation: getRedoRecord - Record: {futures[f][PAYLOAD_RECORD]}')
-                            redo_error_recs += 1
-                        except (G2Exception, G2UnrecoverableException) as ex:
-                            logger.critical(f'Exception: {ex} - Operation: getRedoRecord - Record: {futures[f][PAYLOAD_RECORD]}')
-                            do_shutdown = True
-                        else:
-                            if redo_record and not do_shutdown:
-                                redo_records += 1
-                                futures[redoer.submit(process_redo_record, engine, redo_record, with_info)] = (redo_record, time.time())
+                        if call_governor:
+                            check_governor()
 
-                            redo_success_recs += 1
-                            if redo_success_recs % 1000 == 0:
-                                prev_time = record_stats(success_recs, error_recs, prev_time, 'redo')
+                        for f in concurrent.futures.as_completed(futures.keys()):
+                            try:
+                                result = f.result()
+                                redo_record = get_redo_records(engine, 1)
+                            except (G2BadInputException, G2RetryableException, json.JSONDecodeError) as ex:
+                                logger.error(f'Exception: {ex} - Operation: getRedoRecord - Record: {futures[f][PAYLOAD_RECORD]}')
+                                redo_error_recs += 1
+                            except (G2Exception, G2UnrecoverableException) as ex:
+                                logger.critical(f'Exception: {ex} - Operation: getRedoRecord - Record: {futures[f][PAYLOAD_RECORD]}')
+                                do_shutdown = True
+                            else:
+                                if redo_record and not do_shutdown:
+                                    redo_records += 1
+                                    futures[redoer.submit(process_redo_record, engine, redo_record, with_info)] = (redo_record, time.time())
 
-                            if redo_success_recs % 10000 == 0:
-                                workload_stats(engine)
+                                redo_success_recs += 1
+                                if redo_success_recs % 1000 == 0:
+                                    prev_time = record_stats(redo_success_recs, redo_error_recs, prev_time, 'redo')
 
-                            if result:
-                                out_file.write(result + '\n')
+                                if redo_success_recs % 10000 == 0:
+                                    workload_stats(engine)
 
-                            if time_now > long_check_time + (LONG_RECORD / 2):
-                                long_check_time = time_now
-                                long_running_check(futures, time_now, redoer._max_workers)
-                        finally:
-                            futures.pop(f)
+                                if result:
+                                    out_file.write(result + '\n')
+
+                                if time_now > long_check_time + (LONG_RECORD / 2):
+                                    long_check_time = time_now
+                                    long_running_check(futures, time_now, redoer._max_workers)
+                            finally:
+                                futures.pop(f)
+            else:
+                logger.info('No redo records to process.')
 
             # If interrupted during redo log details
             if do_shutdown:
@@ -340,8 +350,6 @@ if __name__ == '__main__':
     PAYLOAD_START_TIME = 1
     do_shutdown = False
     module_name = pathlib.Path(sys.argv[0]).stem
-    container_output_path = '/output/'
-    container_input_path = '/input/'
 
     szload_parser = argparse.ArgumentParser(
         allow_abbrev=False,
@@ -425,34 +433,7 @@ if __name__ == '__main__':
                Env Var: SENZING_THREADS_PER_PROCESS
     
              '''))
-    szload_parser.add_argument(
-        '-if', '--infoFile',
-        action=CustomArgAction,
-        default=f'{module_name}_withInfo_{str(datetime.now().strftime("%Y%m%d_%H%M%S"))}.jsonl',
-        metavar='file',
-        nargs='?',
-        help=textwrap.dedent('''\
-    
-               Path/file to write with info data to.
-    
-               Default: %(default)s
-               Env Var: SENZING_WITHINFO_FILE
-    
-             '''))
-    szload_parser.add_argument(
-        '-ef', '--errorsFile',
-        action=CustomArgAction,
-        default=f'{module_name}_errors_{str(datetime.now().strftime("%Y%m%d_%H%M%S"))}.log',
-        metavar='file',
-        nargs='?',
-        help=textwrap.dedent('''\
-    
-               Path/file to write errors to.
-    
-               Default: %(default)s
-               Env Var: SENZING_ERRORS_FILE
-    
-             '''))
+
     cli_args = szload_parser.parse_args()
 
     # If a CLI arg was specified use it, else try the env var, if no env var use the default for the CLI arg
@@ -462,15 +443,9 @@ if __name__ == '__main__':
     withinfo = cli_args.info if cli_args.__dict__.get('info_specified') else arg_convert_boolean("SENZING_WITHINFO", cli_args.info)
     debug_trace = cli_args.debugTrace if cli_args.__dict__.get('debugTrace_specified') else arg_convert_boolean("SENZING_DEBUG", cli_args.debugTrace)
     num_threads = cli_args.numThreads if cli_args.__dict__.get('numThreads_specified') else int(os.getenv("SENZING_THREADS_PER_PROCESS", cli_args.numThreads))
-    withinfo_file = cli_args.infoFile if cli_args.__dict__.get('infoFile_specified') else os.getenv("SENZING_WITHINFO_FILE", cli_args.infoFile)
-    errors_file = cli_args.errorsFile if cli_args.__dict__.get('errorsFile_specified') else os.getenv("SENZING_ERRORS_FILE", cli_args.errorsFile)
 
-    # Check if running in a container and set files to default if so. In a container files written to specific mounted
-    # to keep it immutable. Checked here and below as need errors_file for the logger.
-    run_in_container = os.getenv("SENZING_DOCKER_LAUNCHED")
-    if run_in_container:
-        withinfo_file = container_output_path + szload_parser.get_default('infoFile')
-        errors_file = container_output_path + szload_parser.get_default('errorsFile')
+    withinfo_file = f'/output/{module_name}_withInfo_{str(datetime.now().strftime("%Y%m%d_%H%M%S"))}.jsonl'
+    errors_file = f'/output/{module_name}_errors_{str(datetime.now().strftime("%Y%m%d_%H%M%S"))}.log'
 
     # Create logger
     try:
@@ -487,13 +462,10 @@ if __name__ == '__main__':
         logger.addHandler(console_handle)
         logger.addHandler(file_handle)
     except IOError as ex:
-        if run_in_container:
-            print(ex)
-            print('\nWhen running in a container, both /input and /output must be mounted to the host system.')
-            print(f'Example: docker run -it --rm -u $UID -v ${{PWD}}:/input -v ${{PWD}}:/output -e SENZING_ENGINE_CONFIGURATION_JSON  senzing/{module_name} -f /input/load_file.json')
-            sys.exit(-1)
-        else:
-            raise
+        print(ex)
+        print('\nBoth /input and /output must be mounted to the host system.')
+        print(f'Example: docker run -it --rm -u $UID -v ${{PWD}}:/input -v ${{PWD}}:/output -e SENZING_ENGINE_CONFIGURATION_JSON  senzing/{module_name} -f /input/load_file.json')
+        sys.exit(-1)
 
     if not ingest_file:
         logger.warning('An input file to load must be specified with --file or SENZING_INPUT_FILE environment variable')
@@ -503,19 +475,6 @@ if __name__ == '__main__':
         logger.warning('SENZING_ENGINE_CONFIGURATION_JSON environment variable or --configJson CLI argument must be set with the engine configuration JSON')
         logger.warning('https://senzing.zendesk.com/hc/en-us/articles/360038774134-G2Module-Configuration-and-the-Senzing-API')
         sys.exit(-1)
-
-    # Check if running in a container and errors or with info file has been specified. Can't be modified in a container.
-    if run_in_container:
-        if cli_args.__dict__.get('errorsFile_specified') or \
-           cli_args.__dict__.get('infoFile_specified') or \
-           os.getenv("SENZING_ERRORS_FILE") or \
-           os.getenv("SENZING_WITHINFO_FILE"):
-            logger.warning('When running in a container, specifying an errors or with info file has no effect, files will be written to /output.')
-
-        if str(pathlib.Path(ingest_file).parent) != '/input':
-            logger.error('When running in a container, the input file must be specified as /input/<file_name> and mounted to /input')
-            logger.error(f'Example: docker run -it --rm -u $UID -v ${{PWD}}:/input -v ${{PWD}}:/output -e SENZING_ENGINE_CONFIGURATION_JSON  senzing/{module_name} -f /input/load_file.json')
-            sys.exit(-1)
 
     try:
         sz_engine = G2Engine()
