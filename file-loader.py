@@ -222,7 +222,7 @@ def load_and_redo(engine, file_input, file_output, file_errors, num_workers, wit
                 futures = {loader.submit(add_record, engine, record, with_info): (record.strip(), time.time()) for record in itertools.islice(in_file, loader._max_workers)}
                 logger.info(f'Starting to load with {loader._max_workers} threads...')
                 load_records += loader._max_workers
-                
+
                 while futures:
                     time_now = time.time()
 
