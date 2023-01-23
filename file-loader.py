@@ -134,7 +134,7 @@ def get_redo_records(engine, quantity):
         for _ in range(quantity):
             redo_record = bytearray()
             engine.getRedoRecord(redo_record)
-            redo_records.append(redo_record)
+            redo_records.append(redo_record.decode())
     except G2Exception as ex:
         logger.critical(f'Exception: {ex} - Operation: getRedoRecord')
         global do_shutdown
@@ -148,10 +148,10 @@ def process_redo_record(engine, record, with_info):
     """Process a single redo record, returning with info details if --info or SENZING_WITHINFO was specified"""
     if with_info:
         with_info_response = bytearray()
-        engine.processRedoRecordWithInfo(record, with_info_response)
+        engine.processWithInfo(record, with_info_response)
         return with_info_response.decode()
 
-    engine.processRedoRecord(record)
+    engine.process(record)
     return None
 
 
