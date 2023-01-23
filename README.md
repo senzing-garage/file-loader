@@ -2,7 +2,7 @@
 
  ## Overview
 
-file-loader.py is a Python utility to load [Senzing mapped JSON data](https://senzing.zendesk.com/hc/en-us/articles/231925448-Generic-Entity-Specification), once loading is complete [redo records](https://senzing.zendesk.com/hc/en-us/articles/360007475133-Processing-REDO) are processed.
+file-loader is a Python utility to load [Senzing mapped JSON data](https://senzing.zendesk.com/hc/en-us/articles/231925448-Generic-Entity-Specification), once loading is complete [redo records](https://senzing.zendesk.com/hc/en-us/articles/360007475133-Processing-REDO) are processed. file-loader is designed to be run as a Docker container.
 
 
 ```console
@@ -89,7 +89,7 @@ Note: SENZING_WITHINFO_FILE and SENZING_ERRORS_FILE are only valid when running 
 ## Running
 
 ### Data Source
-Ensure any DATA_SOURCE values used in the files to load exist in the Senzing configuration with G2ConfigTool.
+Ensure any DATA_SOURCE values used in the files to load exist in the Senzing configuration with G2ConfigTool. For details of how to add them, see [Quickstart For Docker](https://senzing.zendesk.com/hc/en-us/articles/12938524464403-Quickstart-For-Docker).
 
 ### Docker
 Export SENZING_ENGINE_CONFIGURATION_JSON, modify CONNECTION details to your database. 

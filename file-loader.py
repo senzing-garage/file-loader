@@ -20,9 +20,9 @@ except ModuleNotFoundError:
     import json
 
 __all__ = []
-__version__ = '1.1.0'  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = '1.1.1'  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2022-11-29'
-__updated__ = '2023-01-16'
+__updated__ = '2023-01-23'
 
 
 # Custom actions for argparse. Enables checking if an arg "was specified" on the CLI to check if CLI args should take
@@ -190,16 +190,26 @@ def long_running_check(futures, time_now, num_workers):
         logger.warning(f'All {num_workers} threads are stuck processing long running records')
 
 
-def check_governor():
-    """Check Postgres XID and slow down load if required"""
-    gov_pause_secs = gov.govern()
-    if gov_pause_secs > 0:
-        logger.info(f'Pausing for {gov_pause_secs} secs, governor has triggered for Postgres database(s)... ')
-        time.sleep(gov_pause_secs)
+def results(result_type, infile, outfile, withinfo, load_recs, load_success, redo_recs, redo_success, start, errors, errorsfile):
+    """Show processing results"""
+    results_string = f'{result_type} Results'
+    logger.info('')
+    logger.info(results_string)
+    logger.info('-' * len(results_string))
+    logger.info('')
+    if result_type == 'Overall':
+        logger.info(f'Source File:                     {pathlib.Path(infile).resolve()}')
+    logger.info(f'Total / successful load records: {load_recs:,} / {load_success:,}')
+    if result_type == 'Overall':
+        logger.info(f'Total / successful redo records: {redo_recs:,} / {redo_success:,}')
+    logger.info(f'Elapsed time:                    {round((time.time() - start) / 60, 1)} mins')
+    if result_type == 'Overall':
+        logger.info(f'With Info:                       {outfile if withinfo else "Not requested"}')
+    logger.info(f'Errors:                          {errors:,}{" - " + errorsfile if errors else ""}')
 
 
 def signal_int(signum, frame):
-    """Catch interrupt to allow running threads to finish"""
+    """Interrupt to allow running threads to finish"""
     logger.warning('Please wait for running tasks to complete, this could take many minutes...\n')
     global do_shutdown
     do_shutdown = True
@@ -208,27 +218,18 @@ def signal_int(signum, frame):
 def load_and_redo(engine, file_input, file_output, file_errors, num_workers, with_info, call_governor):
     """Load records and process redo records after loading is complete"""
     global do_shutdown
-    prev_time = time.time()
+    start_time = long_check_time = work_stats_time = prev_time = time.time()
     success_recs = error_recs = redo_error_recs = redo_success_recs = 0
-    start_time = time.time()
+    add_future = True
 
     with open(file_output, 'w') as out_file:
         with open(file_input, 'r') as in_file:
-            load_records = 0
-            long_check_time = time.time()
-
             # Loader
             with concurrent.futures.ThreadPoolExecutor(num_workers if num_workers else None) as loader:
                 futures = {loader.submit(add_record, engine, record, with_info): (record.strip(), time.time()) for record in itertools.islice(in_file, loader._max_workers)}
                 logger.info(f'Starting to load with {loader._max_workers} threads...')
-                load_records += loader._max_workers
-
+                load_records = loader._max_workers
                 while futures:
-                    time_now = time.time()
-
-                    if call_governor:
-                        check_governor()
-
                     for f in concurrent.futures.as_completed(futures.keys()):
                         try:
                             result = f.result()
@@ -240,99 +241,103 @@ def load_and_redo(engine, file_input, file_output, file_errors, num_workers, wit
                             do_shutdown = True
                         else:
                             record = in_file.readline()
-                            if record and not do_shutdown:
+                            if record and add_future and not do_shutdown:
                                 load_records += 1
                                 futures[loader.submit(add_record, engine, record.strip(), with_info)] = (record.strip(), time.time())
-
-                            success_recs += 1
-                            if success_recs % 1000 == 0:
-                                prev_time = record_stats(success_recs, error_recs, prev_time, 'adds')
-
-                            if success_recs % 10000 == 0:
-                                workload_stats(engine)
 
                             if result:
                                 out_file.write(result + '\n')
 
-                            if time_now > long_check_time + (LONG_RECORD / 2):
-                                long_check_time = time_now
-                                long_running_check(futures, time_now, loader._max_workers)
+                            success_recs += 1
+                            if success_recs % 1000 == 0:
+                                prev_time = record_stats(success_recs, error_recs, prev_time, 'adds')
                         finally:
                             futures.pop(f)
 
-            logger.info(f'Successfully loaded {success_recs} records, with {error_recs} errors')
+                    if call_governor:
+                        gov_pause_secs = gov.govern()
+                        if gov_pause_secs < 0:
+                            time.sleep(1)
+                            add_future = False
+                            continue
+                        add_future = True
 
-            # If interrupted during load don't perform redo
+                        if gov_pause_secs > 0:
+                            time.sleep(gov_pause_secs)
+
+                    time_now = time.time()
+                    if time_now > work_stats_time + WORK_STATS_INTERVAL:
+                        work_stats_time = time_now
+                        workload_stats(engine)
+
+                    if time_now > long_check_time + LONG_RECORD:
+                        long_check_time = time_now
+                        long_running_check(futures, time_now, loader._max_workers)
+
+            results('Loading', file_input, file_output, with_info, load_records, success_recs, 0, 0, start_time, error_recs, errors_file)
+
             if do_shutdown:
-                logger.warning('Processing was interrupted, shutting down. Loading may not be complete and redo processing will not be started.')
+                logger.info('')
+                logger.warning('Processing was interrupted, shutting down. Loading is not complete and redo processing will not be started.')
                 sys.exit(-1)
 
             # Redoer
+            logger.info('')
             logger.info('Checking for and processing redo records...')
-            redo_records = 0
-            redo_count = engine.countRedoRecords()
+            with concurrent.futures.ThreadPoolExecutor(num_workers if num_workers else None) as redoer:
+                futures = {redoer.submit(process_redo_record, engine, record, with_info): (record, time.time()) for record in get_redo_records(engine, redoer._max_workers)}
+                redo_records = redoer._max_workers
+                while futures:
 
-            if redo_count:
-                long_check_time = time.time()
-                with concurrent.futures.ThreadPoolExecutor(num_workers if num_workers else None) as redoer:
-                    futures = {redoer.submit(process_redo_record, engine, record, with_info): (record, time.time()) for record in get_redo_records(engine, redoer._max_workers)}
-                    logger.info(f'Starting to process redo with {redoer._max_workers} threads...')
-                    redo_records += redoer._max_workers
-                    while futures:
-                        time_now = time.time()
+                    for f in concurrent.futures.as_completed(futures.keys()):
+                        try:
+                            result = f.result()
+                            redo_record = get_redo_records(engine, 1)
+                        except (G2BadInputException, G2RetryableException, json.JSONDecodeError) as ex:
+                            logger.error(f'Exception: {ex} - Operation: getRedoRecord - Record: {futures[f][PAYLOAD_RECORD]}')
+                            redo_error_recs += 1
+                        except (G2Exception, G2UnrecoverableException) as ex:
+                            logger.critical(f'Exception: {ex} - Operation: getRedoRecord - Record: {futures[f][PAYLOAD_RECORD]}')
+                            do_shutdown = True
+                        else:
+                            if redo_record and add_future and not do_shutdown:
+                                redo_records += 1
+                                futures[redoer.submit(process_redo_record, engine, redo_record, with_info)] = (redo_record, time.time())
 
-                        if call_governor:
-                            check_governor()
+                            if result:
+                                out_file.write(result + '\n')
 
-                        for f in concurrent.futures.as_completed(futures.keys()):
-                            try:
-                                result = f.result()
-                                redo_record = get_redo_records(engine, 1)
-                            except (G2BadInputException, G2RetryableException, json.JSONDecodeError) as ex:
-                                logger.error(f'Exception: {ex} - Operation: getRedoRecord - Record: {futures[f][PAYLOAD_RECORD]}')
-                                redo_error_recs += 1
-                            except (G2Exception, G2UnrecoverableException) as ex:
-                                logger.critical(f'Exception: {ex} - Operation: getRedoRecord - Record: {futures[f][PAYLOAD_RECORD]}')
-                                do_shutdown = True
-                            else:
-                                if redo_record and not do_shutdown:
-                                    redo_records += 1
-                                    futures[redoer.submit(process_redo_record, engine, redo_record, with_info)] = (redo_record, time.time())
+                            redo_success_recs += 1
+                            if redo_success_recs % 1000 == 0:
+                                prev_time = record_stats(redo_success_recs, redo_error_recs, prev_time, 'redo')
+                        finally:
+                            futures.pop(f)
 
-                                redo_success_recs += 1
-                                if redo_success_recs % 1000 == 0:
-                                    prev_time = record_stats(redo_success_recs, redo_error_recs, prev_time, 'redo')
+                    if call_governor:
+                        gov_pause_secs = gov.govern()
+                        if gov_pause_secs < 0:
+                            time.sleep(1)
+                            add_future = False
+                            continue
+                        add_future = True
 
-                                if redo_success_recs % 10000 == 0:
-                                    workload_stats(engine)
+                        if gov_pause_secs > 0:
+                            time.sleep(gov_pause_secs)
 
-                                if result:
-                                    out_file.write(result + '\n')
+                    time_now = time.time()
+                    if time_now > work_stats_time + WORK_STATS_INTERVAL:
+                        work_stats_time = time_now
+                        workload_stats(engine)
 
-                                if time_now > long_check_time + (LONG_RECORD / 2):
-                                    long_check_time = time_now
-                                    long_running_check(futures, time_now, redoer._max_workers)
-                            finally:
-                                futures.pop(f)
-            else:
-                logger.info('No redo records to process.')
+                    if time_now > long_check_time + LONG_RECORD:
+                        long_check_time = time_now
+                        long_running_check(futures, time_now, redoer._max_workers)
 
-            # If interrupted during redo log details
             if do_shutdown:
-                logger.warning('Processing was interrupted, shutting down. Redo may not be complete.')
+                logger.warning('Processing was interrupted, shutting down. Redo did not complete.')
 
-            logger.info('')
-            logger.info('Results')
-            logger.info('-------')
-            logger.info('')
-            logger.info(f'Source File:                     {pathlib.Path(file_input).resolve()}')
-            logger.info(f'Total / successful load records: {load_records:,} / {success_recs:,}')
-            logger.info(f'Total / successful redo records: {redo_records:,} / {redo_success_recs:,}')
-            logger.info(f'Elapsed time:                    {round((time.time() - start_time) / 60, 1)} mins')
-            logger.info(f'With Info:                       {file_output if with_info else "Not requested"}')
-            logger.info(f'Errors:                          {error_recs:,}{" - " + errors_file if error_recs else ""}')
+            results('Overall', file_input, file_output, with_info, load_records, success_recs, redo_records, redo_success_recs, start_time, error_recs, errors_file)
 
-            # If with info wasn't requested delete the with info output file
             if not cli_args.info and not os.getenv("SENZING_WITHINFO"):
                 pathlib.Path(file_output).unlink(missing_ok=True)
 
@@ -348,10 +353,13 @@ if __name__ == '__main__':
     LONG_RECORD = 300
     PAYLOAD_RECORD = 0
     PAYLOAD_START_TIME = 1
+    WORK_STATS_INTERVAL = 60
     do_shutdown = False
     module_name = pathlib.Path(sys.argv[0]).stem
+    container_output_path = '/output/'
+    container_input_path = '/input/'
 
-    szload_parser = argparse.ArgumentParser(
+    arg_parser = argparse.ArgumentParser(
         allow_abbrev=False,
         description='Utility to load Senzing JSON records and process redo records',
         epilog=textwrap.dedent('''\
@@ -369,7 +377,7 @@ if __name__ == '__main__':
                '''),
         formatter_class=argparse.RawTextHelpFormatter)
 
-    szload_parser.add_argument(
+    arg_parser.add_argument(
         '-f', '--file',
         action=CustomArgAction,
         default=None,
@@ -382,7 +390,7 @@ if __name__ == '__main__':
                Env Var: SENZING_INPUT_FILE
         
              '''))
-    szload_parser.add_argument(
+    arg_parser.add_argument(
         '-cj', '--configJson',
         action=CustomArgAction,
         default=None,
@@ -396,7 +404,7 @@ if __name__ == '__main__':
                Env Var: SENZING_ENGINE_CONFIGURATION_JSON
         
              '''))
-    szload_parser.add_argument(
+    arg_parser.add_argument(
         '-i', '--info',
         action=CustomArgActionStoreTrue,
         default=False,
@@ -408,7 +416,7 @@ if __name__ == '__main__':
                Env Var: SENZING_WITHINFO
                
              '''))
-    szload_parser.add_argument(
+    arg_parser.add_argument(
         '-t', '--debugTrace',
         action=CustomArgActionStoreTrue,
         default=False,
@@ -420,7 +428,7 @@ if __name__ == '__main__':
                Env Var: SENZING_DEBUG
     
              '''))
-    szload_parser.add_argument(
+    arg_parser.add_argument(
         '-nt', '--numThreads',
         action=CustomArgAction,
         default=0,
@@ -433,8 +441,7 @@ if __name__ == '__main__':
                Env Var: SENZING_THREADS_PER_PROCESS
     
              '''))
-
-    cli_args = szload_parser.parse_args()
+    cli_args = arg_parser.parse_args()
 
     # If a CLI arg was specified use it, else try the env var, if no env var use the default for the CLI arg
     # Sets the priority to 1) CLI arg, 2) Env Var 3) Default value
@@ -447,7 +454,6 @@ if __name__ == '__main__':
     withinfo_file = f'/output/{module_name}_withInfo_{str(datetime.now().strftime("%Y%m%d_%H%M%S"))}.jsonl'
     errors_file = f'/output/{module_name}_errors_{str(datetime.now().strftime("%Y%m%d_%H%M%S"))}.log'
 
-    # Create logger
     try:
         logger = logging.getLogger(sys.argv[0].rstrip('.py').lstrip('./'))
         console_handle = logging.StreamHandler(stream=sys.stdout)
@@ -492,13 +498,30 @@ if __name__ == '__main__':
         logger.error(ex)
         sys.exit(-1)
 
-    # If the database is Postgres import the governor
+    # If the database is Postgres import the governor and logger for Governor
     db_is_postgres = startup_info(sz_engine, sz_diag, sz_product, sz_configmgr)
     if db_is_postgres:
         logger.info('Postgres detected, loading the Senzing governor')
         logger.info('')
+
+        #For the Governor
+        log_format = '%(asctime)s - Senzing Governor - %(levelname)s:  %(message)s'
+        log_level_map = {
+          "notset": logging.NOTSET,
+          "debug": logging.DEBUG,
+          "info": logging.INFO,
+          "fatal": logging.FATAL,
+          "warning": logging.WARNING,
+          "error": logging.ERROR,
+          "critical": logging.CRITICAL,
+        }
+
+        log_level_parameter = os.getenv("SENZING_LOG_LEVEL", "info").lower()
+        log_level = log_level_map.get(log_level_parameter, logging.INFO)
+        logging.basicConfig(format=log_format, level=log_level)
+
         senzing_governor = importlib.import_module("senzing_governor")
-        gov = senzing_governor.Governor(hint="SzLoader")
+        gov = senzing_governor.Governor(hint="file-loader")
 
     load_and_redo(sz_engine, ingest_file, withinfo_file, errors_file, num_threads, withinfo, db_is_postgres)
 
