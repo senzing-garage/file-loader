@@ -220,7 +220,7 @@ def load_and_redo(engine, file_input, file_output, file_errors, num_workers, wit
     global do_shutdown
     start_time = long_check_time = work_stats_time = prev_time = time.time()
     success_recs = error_recs = redo_error_recs = redo_success_recs = 0
-    add_future = add_redo = True
+    add_future = True
 
     with open(file_output, 'w') as out_file:
         with open(file_input, 'r') as in_file:
