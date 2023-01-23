@@ -190,7 +190,7 @@ def long_running_check(futures, time_now, num_workers):
         logger.warning(f'All {num_workers} threads are stuck processing long running records')
 
 
-def results(result_type, input, output, withinfo, load_recs, load_success, redo_recs, redo_success, start, errors, errorsfile):
+def results(result_type, infile, outfile, withinfo, load_recs, load_success, redo_recs, redo_success, start, errors, errorsfile):
     """Show processing results"""
     results_string = f'{result_type} Results'
     logger.info('')
@@ -198,13 +198,13 @@ def results(result_type, input, output, withinfo, load_recs, load_success, redo_
     logger.info('-' * len(results_string))
     logger.info('')
     if result_type == 'Overall':
-        logger.info(f'Source File:                     {pathlib.Path(input).resolve()}')
+        logger.info(f'Source File:                     {pathlib.Path(infile).resolve()}')
     logger.info(f'Total / successful load records: {load_recs:,} / {load_success:,}')
     if result_type == 'Overall':
         logger.info(f'Total / successful redo records: {redo_recs:,} / {redo_success:,}')
     logger.info(f'Elapsed time:                    {round((time.time() - start) / 60, 1)} mins')
     if result_type == 'Overall':
-        logger.info(f'With Info:                       {output if withinfo else "Not requested"}')
+        logger.info(f'With Info:                       {outfile if withinfo else "Not requested"}')
     logger.info(f'Errors:                          {errors:,}{" - " + errorsfile if errors else ""}')
 
 
@@ -300,7 +300,7 @@ def load_and_redo(engine, file_input, file_output, file_errors, num_workers, wit
                             logger.critical(f'Exception: {ex} - Operation: getRedoRecord - Record: {futures[f][PAYLOAD_RECORD]}')
                             do_shutdown = True
                         else:
-                            if redo_record and add_redo and not do_shutdown:
+                            if redo_record and add_future and not do_shutdown:
                                 redo_records += 1
                                 futures[redoer.submit(process_redo_record, engine, redo_record, with_info)] = (redo_record, time.time())
 
