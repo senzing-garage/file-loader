@@ -288,7 +288,6 @@ def load_and_redo(engine, file_input, file_output, file_errors, num_workers, wit
                 futures = {redoer.submit(process_redo_record, engine, record, with_info): (record, time.time()) for record in get_redo_records(engine, redoer._max_workers)}
                 redo_records = redoer._max_workers
                 while futures:
-                    time_now = time.time()
 
                     for f in concurrent.futures.as_completed(futures.keys()):
                         try:
