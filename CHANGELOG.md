@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 [markdownlint](https://dlaa.me/markdownlint/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2023-01-26
+
+### Fixed in 1.2.0
+
+- Fixed abend when priming loader or redeor concurrent futures
+
 ## [1.1.1] - 2023-01-23
 
 ### Changed in 1.1.1
