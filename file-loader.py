@@ -272,10 +272,10 @@ def load_and_redo(engine, file_input, file_output, file_errors, num_workers, wit
                                 if record and add_future and not do_shutdown:
                                     load_records += 1
                                     futures[loader.submit(add_record, engine, record.strip(), with_info)] = (record.strip(), time.time())
-                
+
                                 if result:
                                     out_file.write(result + '\n')
-                
+
                                 success_recs += 1
                                 if success_recs % 1000 == 0:
                                     prev_time = record_stats(success_recs, error_recs, prev_time, 'adds')
@@ -289,15 +289,15 @@ def load_and_redo(engine, file_input, file_output, file_errors, num_workers, wit
                                 add_future = False
                                 continue
                             add_future = True
-                
+
                             if gov_pause_secs > 0:
                                 time.sleep(gov_pause_secs)
-                
+
                         time_now = time.time()
                         if time_now > work_stats_time + WORK_STATS_INTERVAL:
                             work_stats_time = time_now
                             workload_stats(engine)
-                
+
                         if time_now > long_check_time + LONG_RECORD:
                             long_check_time = time_now
                             long_running_check(futures, time_now, loader._max_workers)
@@ -320,7 +320,7 @@ def load_and_redo(engine, file_input, file_output, file_errors, num_workers, wit
                     max_redo_workers = num_workers if num_redo_records >= num_workers else num_redo_records
                 else:
                     max_redo_workers = test_max_workers if num_redo_records >= test_max_workers else num_redo_records
-            
+
                 with concurrent.futures.ThreadPoolExecutor(max_redo_workers) as redoer:
                     futures = {redoer.submit(process_redo_record, engine, record, with_info): (record, time.time()) for record in get_redo_records(engine, redoer._max_workers)}
                     redo_records = redoer._max_workers
