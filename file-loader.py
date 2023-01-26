@@ -281,7 +281,7 @@ def load_and_redo(engine, file_input, file_output, file_errors, num_workers, wit
                                     prev_time = record_stats(success_recs, error_recs, prev_time, 'adds')
                             finally:
                                 futures.pop(f)
-                
+
                         if call_governor:
                             gov_pause_secs = gov.govern()
                             if gov_pause_secs < 0:
