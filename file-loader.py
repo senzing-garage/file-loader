@@ -20,9 +20,9 @@ except ModuleNotFoundError:
     import json
 
 __all__ = []
-__version__ = '1.1.1'  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = '1.2.0'  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2022-11-29'
-__updated__ = '2023-01-23'
+__updated__ = '2023-01-26'
 
 
 # Custom actions for argparse. Enables checking if an arg "was specified" on the CLI to check if CLI args should take
@@ -126,6 +126,15 @@ def add_record(engine, rec_to_add, with_info):
     engine.addRecord(data_source, record_id, rec_to_add)
     return None
 
+def redo_count(engine):
+    """Check if there are redo records to process"""
+    try:
+        return engine.countRedoRecords()
+    except G2Exception as ex:
+        logger.critical(f'Exception: {ex} - Operation: countRedoRecords')
+        logger.warning('Processing was interrupted, shutting down. Loading is complete but redo processing has not been completed.')
+        return 0
+
 
 def get_redo_records(engine, quantity):
     """Get a specified number of redo records for processing"""
@@ -219,60 +228,79 @@ def load_and_redo(engine, file_input, file_output, file_errors, num_workers, wit
     """Load records and process redo records after loading is complete"""
     global do_shutdown
     start_time = long_check_time = work_stats_time = prev_time = time.time()
-    success_recs = error_recs = redo_error_recs = redo_success_recs = 0
+    success_recs = error_recs = load_records = redo_records = redo_error_recs = redo_success_recs = in_file_count = 0
     add_future = True
+
+    # Test the max number of workers ThreadPoolExecutor allocates to use in sizing actual workers to request
+    with concurrent.futures.ThreadPoolExecutor() as test:
+        test_max_workers = test._max_workers
+
+    # Test number of lines in input file to size max workers, input file could be smaller than calculated max workers
+    for _ in (True,):
+        with open(file_input, 'r') as in_file:
+            for _ in in_file:
+                in_file_count += 1
+                if in_file_count == test_max_workers:
+                    break
+
+    # Calculate the number of max workers for priming the loader
+    if num_workers:
+        max_load_workers = num_workers if in_file_count >= num_workers else in_file_count
+    else:
+        max_load_workers = test_max_workers if in_file_count >= test_max_workers else in_file_count
 
     with open(file_output, 'w') as out_file:
         with open(file_input, 'r') as in_file:
             # Loader
-            with concurrent.futures.ThreadPoolExecutor(num_workers if num_workers else None) as loader:
-                futures = {loader.submit(add_record, engine, record, with_info): (record.strip(), time.time()) for record in itertools.islice(in_file, loader._max_workers)}
-                logger.info(f'Starting to load with {loader._max_workers} threads...')
-                load_records = loader._max_workers
-                while futures:
-                    for f in concurrent.futures.as_completed(futures.keys()):
-                        try:
-                            result = f.result()
-                        except (G2BadInputException, G2RetryableException, json.JSONDecodeError) as ex:
-                            logger.error(f'Exception: {ex} - Operation: addRecord - Record: {futures[f][PAYLOAD_RECORD]}')
-                            error_recs += 1
-                        except (G2Exception, G2UnrecoverableException) as ex:
-                            logger.critical(f'Exception: {ex} - Operation: addRecord - Record: {futures[f][PAYLOAD_RECORD]}')
-                            do_shutdown = True
-                        else:
-                            record = in_file.readline()
-                            if record and add_future and not do_shutdown:
-                                load_records += 1
-                                futures[loader.submit(add_record, engine, record.strip(), with_info)] = (record.strip(), time.time())
+            if max_load_workers > 0:
+                with concurrent.futures.ThreadPoolExecutor(max_load_workers) as loader:
+                    futures = {loader.submit(add_record, engine, record, with_info): (record.strip(), time.time()) for record in itertools.islice(in_file, loader._max_workers)}
+                    logger.info(f'Starting to load with {loader._max_workers} threads...')
+                    load_records = loader._max_workers
+                    while futures:
+                        for f in concurrent.futures.as_completed(futures.keys()):
+                            try:
+                                result = f.result()
+                            except (G2BadInputException, G2RetryableException, json.JSONDecodeError) as ex:
+                                logger.error(f'Exception: {ex} - Operation: addRecord - Record: {futures[f][PAYLOAD_RECORD]}')
+                                error_recs += 1
+                            except (G2Exception, G2UnrecoverableException) as ex:
+                                logger.critical(f'Exception: {ex} - Operation: addRecord - Record: {futures[f][PAYLOAD_RECORD]}')
+                                do_shutdown = True
+                            else:
+                                record = in_file.readline()
+                                if record and add_future and not do_shutdown:
+                                    load_records += 1
+                                    futures[loader.submit(add_record, engine, record.strip(), with_info)] = (record.strip(), time.time())
 
-                            if result:
-                                out_file.write(result + '\n')
+                                if result:
+                                    out_file.write(result + '\n')
 
-                            success_recs += 1
-                            if success_recs % 1000 == 0:
-                                prev_time = record_stats(success_recs, error_recs, prev_time, 'adds')
-                        finally:
-                            futures.pop(f)
+                                success_recs += 1
+                                if success_recs % 1000 == 0:
+                                    prev_time = record_stats(success_recs, error_recs, prev_time, 'adds')
+                            finally:
+                                futures.pop(f)
 
-                    if call_governor:
-                        gov_pause_secs = gov.govern()
-                        if gov_pause_secs < 0:
-                            time.sleep(1)
-                            add_future = False
-                            continue
-                        add_future = True
+                        if call_governor:
+                            gov_pause_secs = gov.govern()
+                            if gov_pause_secs < 0:
+                                time.sleep(1)
+                                add_future = False
+                                continue
+                            add_future = True
 
-                        if gov_pause_secs > 0:
-                            time.sleep(gov_pause_secs)
+                            if gov_pause_secs > 0:
+                                time.sleep(gov_pause_secs)
 
-                    time_now = time.time()
-                    if time_now > work_stats_time + WORK_STATS_INTERVAL:
-                        work_stats_time = time_now
-                        workload_stats(engine)
+                        time_now = time.time()
+                        if time_now > work_stats_time + WORK_STATS_INTERVAL:
+                            work_stats_time = time_now
+                            workload_stats(engine)
 
-                    if time_now > long_check_time + LONG_RECORD:
-                        long_check_time = time_now
-                        long_running_check(futures, time_now, loader._max_workers)
+                        if time_now > long_check_time + LONG_RECORD:
+                            long_check_time = time_now
+                            long_running_check(futures, time_now, loader._max_workers)
 
             results('Loading', file_input, file_output, with_info, load_records, success_recs, 0, 0, start_time, error_recs, errors_file)
 
@@ -282,56 +310,65 @@ def load_and_redo(engine, file_input, file_output, file_errors, num_workers, wit
                 sys.exit(-1)
 
             # Redoer
+            num_redo_records = redo_count(engine)
             logger.info('')
-            logger.info('Checking for and processing redo records...')
-            with concurrent.futures.ThreadPoolExecutor(num_workers if num_workers else None) as redoer:
-                futures = {redoer.submit(process_redo_record, engine, record, with_info): (record, time.time()) for record in get_redo_records(engine, redoer._max_workers)}
-                redo_records = redoer._max_workers
-                while futures:
+            logger.info(f'There are {num_redo_records} redo records to process')
 
-                    for f in concurrent.futures.as_completed(futures.keys()):
-                        try:
-                            result = f.result()
-                            redo_record = get_redo_records(engine, 1)
-                        except (G2BadInputException, G2RetryableException, json.JSONDecodeError) as ex:
-                            logger.error(f'Exception: {ex} - Operation: getRedoRecord - Record: {futures[f][PAYLOAD_RECORD]}')
-                            redo_error_recs += 1
-                        except (G2Exception, G2UnrecoverableException) as ex:
-                            logger.critical(f'Exception: {ex} - Operation: getRedoRecord - Record: {futures[f][PAYLOAD_RECORD]}')
-                            do_shutdown = True
-                        else:
-                            if redo_record and add_future and not do_shutdown:
-                                redo_records += 1
-                                futures[redoer.submit(process_redo_record, engine, redo_record, with_info)] = (redo_record, time.time())
+            if num_redo_records > 0:
+                # Calculate the number of max workers for priming the redoer
+                if num_workers:
+                    max_redo_workers = num_workers if num_redo_records >= num_workers else num_redo_records
+                else:
+                    max_redo_workers = test_max_workers if num_redo_records >= test_max_workers else num_redo_records
 
-                            if result:
-                                out_file.write(result + '\n')
+                with concurrent.futures.ThreadPoolExecutor(max_redo_workers) as redoer:
+                    futures = {redoer.submit(process_redo_record, engine, record, with_info): (record, time.time()) for record in get_redo_records(engine, redoer._max_workers)}
+                    redo_records = redoer._max_workers
+                    while futures:
 
-                            redo_success_recs += 1
-                            if redo_success_recs % 1000 == 0:
-                                prev_time = record_stats(redo_success_recs, redo_error_recs, prev_time, 'redo')
-                        finally:
-                            futures.pop(f)
+                        for f in concurrent.futures.as_completed(futures.keys()):
+                            try:
+                                result = f.result()
+                                redo_record = get_redo_records(engine, 1)
+                            except (G2BadInputException, G2RetryableException, json.JSONDecodeError) as ex:
+                                logger.error(f'Exception: {ex} - Operation: getRedoRecord - Record: {futures[f][PAYLOAD_RECORD]}')
+                                redo_error_recs += 1
+                            except (G2Exception, G2UnrecoverableException) as ex:
+                                logger.critical(f'Exception: {ex} - Operation: getRedoRecord - Record: {futures[f][PAYLOAD_RECORD]}')
+                                do_shutdown = True
+                            else:
+                                if redo_record and add_future and not do_shutdown:
+                                    redo_records += 1
+                                    futures[redoer.submit(process_redo_record, engine, redo_record, with_info)] = (redo_record, time.time())
 
-                    if call_governor:
-                        gov_pause_secs = gov.govern()
-                        if gov_pause_secs < 0:
-                            time.sleep(1)
-                            add_future = False
-                            continue
-                        add_future = True
+                                if result:
+                                    out_file.write(result + '\n')
 
-                        if gov_pause_secs > 0:
-                            time.sleep(gov_pause_secs)
+                                redo_success_recs += 1
+                                if redo_success_recs % 1000 == 0:
+                                    prev_time = record_stats(redo_success_recs, redo_error_recs, prev_time, 'redo')
+                            finally:
+                                futures.pop(f)
 
-                    time_now = time.time()
-                    if time_now > work_stats_time + WORK_STATS_INTERVAL:
-                        work_stats_time = time_now
-                        workload_stats(engine)
+                        if call_governor:
+                            gov_pause_secs = gov.govern()
+                            if gov_pause_secs < 0:
+                                time.sleep(1)
+                                add_future = False
+                                continue
+                            add_future = True
 
-                    if time_now > long_check_time + LONG_RECORD:
-                        long_check_time = time_now
-                        long_running_check(futures, time_now, redoer._max_workers)
+                            if gov_pause_secs > 0:
+                                time.sleep(gov_pause_secs)
+
+                        time_now = time.time()
+                        if time_now > work_stats_time + WORK_STATS_INTERVAL:
+                            work_stats_time = time_now
+                            workload_stats(engine)
+
+                        if time_now > long_check_time + LONG_RECORD:
+                            long_check_time = time_now
+                            long_running_check(futures, time_now, redoer._max_workers)
 
             if do_shutdown:
                 logger.warning('Processing was interrupted, shutting down. Redo did not complete.')
