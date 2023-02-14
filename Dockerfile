@@ -1,7 +1,7 @@
 ARG BASE_IMAGE=senzing/senzingapi-runtime 
 FROM ${BASE_IMAGE}
 
-ENV REFRESHED_AT=2022-12-13
+ENV REFRESHED_AT=2023-02-14
 
 LABEL Name="senzing/SzFileLoader" \
       Maintainer="support@senzing.com" \
