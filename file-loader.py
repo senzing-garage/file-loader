@@ -20,9 +20,9 @@ except ModuleNotFoundError:
     import json
 
 __all__ = []
-__version__ = '1.2.1'  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = '1.2.2'  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2022-11-29'
-__updated__ = '2023-02-20'
+__updated__ = '2023-02-21'
 
 
 # Custom actions for argparse. Enables checking if an arg "was specified" on the CLI to check if CLI args should take
@@ -289,8 +289,7 @@ def load_and_redo(engine, file_input, file_output, file_errors, num_workers, wit
                                     prev_time = record_stats(success_recs, error_recs, prev_time, 'adds')
                             finally:
                                 futures.pop(f)
-                        ##
-                        print(f'{len(futures) = }')
+
                         if do_shutdown and len(futures) == 0 or \
                                 in_file_eof and len(futures) == 0:
                             break
