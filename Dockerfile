@@ -31,8 +31,8 @@ RUN pip3 install --upgrade pip \
 # Install senzing_governor.py.
 
 RUN curl -X GET \
-        --output /opt/senzing/g2/sdk/python/senzing_governor.py \
-        https://raw.githubusercontent.com/Senzing/governor-postgresql-transaction-id/main/senzing_governor.py
+         --output /opt/senzing/g2/sdk/python/senzing_governor.py \
+         https://raw.githubusercontent.com/Senzing/governor-postgresql-transaction-id/main/senzing_governor.py
 
 # Copy files from repository.
 
