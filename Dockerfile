@@ -5,7 +5,7 @@ ENV REFRESHED_AT=2023-09-29
 
 LABEL Name="senzing/SzFileLoader" \
       Maintainer="support@senzing.com" \
-      Version="0.0.2"
+      Version="1.2.3"
 
 # Run as "root" for system installation.
 

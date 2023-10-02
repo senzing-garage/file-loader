@@ -20,9 +20,9 @@ except ModuleNotFoundError:
     import json
 
 __all__ = []
-__version__ = '1.2.2'  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = '1.2.3'  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2022-11-29'
-__updated__ = '2023-02-21'
+__updated__ = '2023-10-02'
 
 
 # Custom actions for argparse. Enables checking if an arg "was specified" on the CLI to check if CLI args should take
@@ -451,17 +451,17 @@ if __name__ == '__main__':
         allow_abbrev=False,
         description='Utility to load Senzing JSON records and process redo records',
         epilog=textwrap.dedent('''\
-                 Arguments can be specified with either CLI arguments or environment variables, some arguments have 
+                 Arguments can be specified with either CLI arguments or environment variables, some arguments have
                  default values.
-        
+
                  The order of precedence for selecting which value to use is:
-        
+
                    1) CLI Argument
                    2) Environment variable
                    3) Default value if available
-                   
+
                  For additional help and information: https://github.com/Senzing/file-loader/blob/main/README.md
-        
+
                '''),
         formatter_class=argparse.RawTextHelpFormatter)
 
@@ -473,10 +473,10 @@ if __name__ == '__main__':
         nargs='?',
         help=textwrap.dedent('''\
                Path and name of file to load.
-               
+
                Default: None, must be specified.
                Env Var: SENZING_INPUT_FILE
-        
+
              '''))
     arg_parser.add_argument(
         '-cj', '--configJson',
@@ -487,10 +487,10 @@ if __name__ == '__main__':
         type=str,
         help=textwrap.dedent('''\
                JSON string of the Senzing engine configuration.
-               
+
                Default: None, must be specified.
                Env Var: SENZING_ENGINE_CONFIGURATION_JSON
-        
+
              '''))
     arg_parser.add_argument(
         '-i', '--info',
@@ -499,10 +499,10 @@ if __name__ == '__main__':
         nargs=0,
         help=textwrap.dedent('''\
                Produce withInfo messages and write to a file
-               
+
                Default: False
                Env Var: SENZING_WITHINFO
-               
+
              '''))
     arg_parser.add_argument(
         '-t', '--debugTrace',
@@ -511,10 +511,10 @@ if __name__ == '__main__':
         nargs=0,
         help=textwrap.dedent('''\
                Output debug trace information.
-               
+
                Default: False
                Env Var: SENZING_DEBUG
-    
+
              '''))
     arg_parser.add_argument(
         '-nt', '--numThreads',
@@ -524,10 +524,10 @@ if __name__ == '__main__':
         type=int,
         help=textwrap.dedent('''\
                Total number of worker threads performing load.
-    
+
                Default: Calculated based on hardware.
                Env Var: SENZING_THREADS_PER_PROCESS
-    
+
              '''))
     cli_args = arg_parser.parse_args()
 
