@@ -330,6 +330,7 @@ def load_and_redo(engine, file_input, file_output, file_errors, num_workers, wit
                             long_check_time = time_now
                             long_running_check(futures, time_now, loader._max_workers)
 
+            workload_stats(engine)
             results('Loading', file_input, file_output, with_info, load_records, success_recs, 0, 0, start_time, error_recs, errors_file)
 
             if do_shutdown:
@@ -420,6 +421,7 @@ def load_and_redo(engine, file_input, file_output, file_errors, num_workers, wit
                             long_check_time = time_now
                             long_running_check(futures, time_now, redoer._max_workers)
 
+            workload_stats(engine)
             if do_shutdown:
                 logger.warning('Processing was interrupted, shutting down. Redo did not complete.')
 
