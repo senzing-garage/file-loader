@@ -443,15 +443,15 @@ def load_and_redo(
             f"{pathlib.Path(file_output).resolve() if with_info else 'With info responses not requested'}"
         )
         logger.info("")
-        logger.info(f"Successful loaded records:  {load_success:,}")
-        logger.info(f"Error loaded records:       {load_errors:,}")
-        logger.info(f"Loading elapsed time:       {load_time}")
+        logger.info(f"Successful loaded records:    {load_success:,}")
+        logger.info(f"Error loaded records:         {load_errors:,}")
+        logger.info(f"Loading elapsed time (mins):  {load_time}")
         logger.info("")
-        logger.info(f"Successful redo records:    {success_recs:,}")
-        logger.info(f"Error redo records:         {error_recs:,}")
-        logger.info(f"Redo elapsed time:          {redo_time}")
+        logger.info(f"Successful redo records:      {success_recs:,}")
+        logger.info(f"Error redo records:           {error_recs:,}")
+        logger.info(f"Redo elapsed time (mins):     {redo_time}")
         logger.info("")
-        logger.info(f"Total elapsed time:         {total_time}")
+        logger.info(f"Total elapsed time (mins):    {total_time}")
 
         if not cli_args.info and not os.getenv("SENZING_WITHINFO"):
             pathlib.Path(file_output).unlink(missing_ok=True)
