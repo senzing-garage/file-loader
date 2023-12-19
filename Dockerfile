@@ -1,11 +1,11 @@
 ARG BASE_IMAGE=senzing/senzingapi-runtime:3.8.0
 FROM ${BASE_IMAGE}
 
-ENV REFRESHED_AT=2023-11-14
+ENV REFRESHED_AT=2023-12-19
 
 LABEL Name="senzing/SzFileLoader" \
       Maintainer="support@senzing.com" \
-      Version="1.2.3"
+      Version="1.3.0"
 
 # Run as "root" for system installation.
 
@@ -42,9 +42,9 @@ COPY ./file-loader.py /
 
 COPY ./rootfs /
 
-# Create path to mount to for input data and output data to persist
+# Create path to mount to for input and output data
 
-RUN mkdir /input /output
+RUN mkdir /data
 
 # Make non-root container.
 
