@@ -265,8 +265,7 @@ def load_and_redo(
                 )
             ] = (record, time.time())
             return False
-        else:
-            return True
+        return True
 
     global do_shutdown
     load_errors = load_success = 0
