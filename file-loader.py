@@ -487,7 +487,7 @@ if __name__ == "__main__":
                    2) Environment variable
                    3) Default value if available
 
-                 For additional help and information: https://github.com/Senzing/file-loader/blob/main/README.md
+                 For additional help and information: https://github.com/senzing-garage/file-loader/blob/main/README.md
 
                """),
         formatter_class=argparse.RawTextHelpFormatter,
