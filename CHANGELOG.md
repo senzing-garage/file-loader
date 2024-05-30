@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 [markdownlint](https://dlaa.me/markdownlint/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.3] - 2024-05-30
+
+### Changed in 1.3.3
+
+- Ensure RECORD_ID is a string when an integer isn't quoted in the input JSON
+
 ## [1.3.2] - 2024-05-22
 
 ### Changed in 1.3.2

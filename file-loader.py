@@ -138,7 +138,7 @@ def add_record(engine, rec_to_add, with_info):
     """Add a single record, returning with info details if --info or SENZING_WITHINFO was specified"""
     record_dict = json.loads(rec_to_add)
     data_source = record_dict.get("DATA_SOURCE", None)
-    record_id = record_dict.get("RECORD_ID", None)
+    record_id = str(record_dict.get("RECORD_ID", ""))
 
     if with_info:
         info_response = bytearray()
