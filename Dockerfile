@@ -11,14 +11,14 @@ LABEL Name="senzing/SzFileLoader" \
 
 USER root
 
-# Install packages via apt.
+# Install packages via apt-get.
 
-RUN apt update \
-  && apt -y install \
+RUN apt-get update \
+  && apt-get -y install \
   curl \
   python3 \
   python3-pip \
-  && apt clean \
+  && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
 # Install packages via pip.
@@ -45,6 +45,8 @@ COPY ./rootfs /
 # Create path to mount to for input and output data
 
 RUN mkdir /data
+
+HEALTHCHECK CMD ["/app/healthcheck.sh"]
 
 # Make non-root container.
 
