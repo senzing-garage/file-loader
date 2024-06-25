@@ -1,11 +1,11 @@
-ARG BASE_IMAGE=senzing/senzingapi-runtime:3.10.1
+ARG BASE_IMAGE=senzing/senzingapi-runtime:3.10.3
 FROM ${BASE_IMAGE}
 
-ENV REFRESHED_AT=2024-05-22
+ENV REFRESHED_AT=2024-06-24
 
 LABEL Name="senzing/SzFileLoader" \
   Maintainer="support@senzing.com" \
-  Version="1.3.2"
+  Version="1.3.3"
 
 # Run as "root" for system installation.
 
