@@ -1,2 +1,2 @@
-orjson==3.10.11
+orjson==3.10.12
 psycopg2-binary==2.9.10
