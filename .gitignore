@@ -128,5 +128,10 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-.history
 .pydevproject
+
+# Visual Studio code
+.vscode/*
+!.vscode/cspell.json
+*.code-workspace
+.history
