@@ -1,0 +1,45 @@
+{
+  // Version of the setting file.  Always 0.2
+  "version": "0.2",
+  // language - current active spelling language
+  "language": "en",
+  // words - list of words to be always considered correct
+  "words": [
+      "abend",
+      "analysing",
+      "buildx",
+      "CCLA",
+      "CODEOWNER",
+      "configmgr",
+      "CONFIGPATH",
+      "dockerhub",
+      "evar",
+      "fstring",
+      "ICLA",
+      "levelname",
+      "LICENSESTRINGBASE",
+      "myhost",
+      "orjson",
+      "psycopg",
+      "pydev",
+      "pydevproject",
+      "pylint",
+      "PYTHONPATH",
+      "PYTHONUNBUFFERED",
+      "redeor",
+      "RESOURCEPATH",
+      "Retryable",
+      "rootfs",
+      "Senzing",
+      "senzingapi",
+      "signum",
+      "simplifiable",
+      "stackoverflow",
+      "SUPPORTPATH",
+      "WITHINFO"
+    ],
+  "ignorePaths": [
+    ".git/**",
+    ".gitignore"
+  ]
+}

@@ -1,21 +1,16 @@
- # file-loader
+# file-loader
 
-If you are beginning your journey with
-[Senzing](https://senzing.com/),
-please start with
-[Senzing Quick Start guides](https://docs.senzing.com/quickstart/).
+If you are beginning your journey with [Senzing],
+please start with [Senzing Quick Start guides].
 
-You are in the
-[Senzing Garage](https://github.com/senzing-garage)
-where projects are "tinkered" on.
+You are in the [Senzing Garage] where projects are "tinkered" on.
 Although this GitHub repository may help you understand an approach to using Senzing,
 it's not considered to be "production ready" and is not considered to be part of the Senzing product.
 Heck, it may not even be appropriate for your application of Senzing!
 
- ## Overview
+## Overview
 
-file-loader is a Python utility to load [Senzing mapped JSON data](https://senzing.zendesk.com/hc/en-us/articles/231925448-Generic-Entity-Specification), once loading is complete [redo records](https://senzing.zendesk.com/hc/en-us/articles/360007475133-Processing-REDO) are processed. file-loader can be run as a Docker container or standalone.
-
+file-loader is a Python utility to load [Senzing mapped JSON data], once loading is complete [redo records] are processed. file-loader can be run as a Docker container or standalone.
 
 ```console
 usage: file-loader.py [-h] [-f [file]] [-cj [config]] [-i] [-t] [-nt num_threads]
@@ -66,12 +61,15 @@ For additional help and information: https://github.com/senzing-garage/file-load
 ```
 
 # APIs Demonstrated
+
 ## Core
+
 - addRecord[WithInfo]: Adds the Senzing JSON record
 - getRedoRecord: Fetch a redo record to process
 - processRedoRecord[WithInfo]: Process a redo record
 
 ## Supporting
+
 - init: To initialize engine objects
 - destroy: To destroy engine objects
 - getConfigList: To get configuration details
@@ -82,11 +80,15 @@ For additional help and information: https://github.com/senzing-garage/file-load
 - stats: To retrieve internal engine diagnostic information as to what is going on in the engine
 
 # Details
+
 Parameters to file-loader can be specified as either environment variables or CLI arguments.
+
 ## Required Parameters (Environment)
+
 - SENZING_ENGINE_CONFIGURATION_JSON
 
 ## Optional Parameters (Environment)
+
 - SENZING_INPUT_FILE
 - SENZING_WITHINFO
 - SENZING_DEBUG
@@ -97,10 +99,13 @@ For details and defaults of the optional parameters see the help information.
 ## Running
 
 ### Data Source
-Ensure any DATA_SOURCE values used in the files to load exist in the Senzing configuration with G2ConfigTool. For details of how to add them, see [Quickstart For Docker](https://senzing.zendesk.com/hc/en-us/articles/12938524464403-Quickstart-For-Docker).
+
+Ensure any DATA_SOURCE values used in the files to load exist in the Senzing configuration with G2ConfigTool. For details of how to add them, see [Quickstart For Docker].
 
 ### Docker
+
 Export SENZING_ENGINE_CONFIGURATION_JSON, modify CONNECTION details to your database.
+
 ```console
 export SENZING_ENGINE_CONFIGURATION_JSON='{
   "PIPELINE": {
@@ -117,6 +122,7 @@ export SENZING_ENGINE_CONFIGURATION_JSON='{
 ```console
 docker run -it --rm -u $UID -v ${PWD}:/data -e SENZING_ENGINE_CONFIGURATION_JSON senzing/file-loader -f /data/customers.json
 ```
+
 The above example assumes the customers.json file is in the current path where the command is being executed from.
 
 ## Additional Items to Note
@@ -128,9 +134,10 @@ The above example assumes the customers.json file is in the current path where t
 ```console
 2022-12-08 15:58:39,045 - file-loader - INFO:  Starting to load with 12 threads...
 ```
+
 - If you have a Senzing license, this can be specified in the JSON configuration with the `LICENSESTRINGBASE64` key.
 
-```console
+````console
 ```json
 {
   "PIPELINE": {
@@ -143,4 +150,11 @@ The above example assumes the customers.json file is in the current path where t
     "CONNECTION": "postgresql://senzing:password@host:5432:g2"
   }
 }
-```
+````
+
+[Quickstart For Docker]: https://senzing.zendesk.com/hc/en-us/articles/12938524464403-Quickstart-For-Docker
+[redo records]: https://senzing.zendesk.com/hc/en-us/articles/360007475133-Processing-REDO
+[Senzing Garage]: https://github.com/senzing-garage
+[Senzing mapped JSON data]: https://senzing.zendesk.com/hc/en-us/articles/231925448-Generic-Entity-Specification
+[Senzing Quick Start guides]: https://docs.senzing.com/quickstart/
+[Senzing]: https://senzing.com/
