@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 [markdownlint](https://dlaa.me/markdownlint/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.5] - 2025-06-03
+
+### Fixed in 1.3.5
+
+- Prevent thread pool draining on non-terminal errors
+
 ## [1.3.4] - 2024-06-24
 
 ### Changed in 1.3.4
