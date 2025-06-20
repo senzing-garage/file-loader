@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 [markdownlint](https://dlaa.me/markdownlint/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.6] - 2025-06-20
+
+### Changed in 1.3.6
+
+- In `Dockerfile`, updated FROM instruction to `senzing/senzingapi-runtime:3.12.8`
+
 ## [1.3.5] - 2025-06-03
 
 ### Fixed in 1.3.5
@@ -43,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improve performance
 - If no input file is specified redo processing will still be performed
 - Can run standalone outside of Docker
-  
+
 ## [1.2.3] - 2023-10-02
 
 ### Changed in 1.2.3
