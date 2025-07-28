@@ -1,11 +1,11 @@
 ARG BASE_IMAGE=senzing/senzingapi-runtime:3.12.8
 FROM ${BASE_IMAGE}
 
-ENV REFRESHED_AT=2025-06-20
+ENV REFRESHED_AT=2025-07-28
 
 LABEL Name="senzing/SzFileLoader" \
-  Maintainer="support@senzing.com" \
-  Version="1.3.6"
+      Maintainer="support@senzing.com" \
+      Version="1.3.6"
 
 # Run as "root" for system installation.
 
@@ -14,25 +14,25 @@ USER root
 # Install packages via apt-get.
 
 RUN apt-get update \
-  && apt-get -y install \
-  curl \
-  python3 \
-  python3-pip \
-  && apt-get clean \
-  && rm -rf /var/lib/apt/lists/*
+ && apt-get -y install \
+      curl \
+      python3 \
+      python3-pip \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
 # Install packages via pip.
 
 COPY requirements.txt .
 RUN pip3 install --upgrade pip \
-  && pip3 install -r requirements.txt \
-  && rm requirements.txt
+ && pip3 install -r requirements.txt \
+ && rm requirements.txt
 
 # Install senzing_governor.py.
 
 RUN curl -X GET \
-  --output /opt/senzing/g2/sdk/python/senzing_governor.py \
-  https://raw.githubusercontent.com/Senzing/governor-postgresql-transaction-id/main/senzing_governor.py
+      --output /opt/senzing/g2/sdk/python/senzing_governor.py \
+      https://raw.githubusercontent.com/Senzing/governor-postgresql-transaction-id/main/src/senzing_governor.py
 
 # Copy files from repository.
 
