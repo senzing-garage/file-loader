@@ -1,7 +1,7 @@
 ARG BASE_IMAGE=senzing/senzingapi-runtime:3.12.8
 FROM ${BASE_IMAGE}
 
-ENV REFRESHED_AT=2025-06-20
+ENV REFRESHED_AT=2025-07-28
 
 LABEL Name="senzing/SzFileLoader" \
   Maintainer="support@senzing.com" \
@@ -32,7 +32,7 @@ RUN pip3 install --upgrade pip \
 
 RUN curl -X GET \
   --output /opt/senzing/g2/sdk/python/senzing_governor.py \
-  https://raw.githubusercontent.com/Senzing/governor-postgresql-transaction-id/refs/heads/main/src/senzing_governor.py
+  https://raw.githubusercontent.com/Senzing/governor-postgresql-transaction-id/main/src/senzing_governor.py
 
 # Copy files from repository.
 
