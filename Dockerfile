@@ -14,7 +14,7 @@ USER root
 # Install packages via apt-get.
 
 RUN apt-get update \
- && apt-get -y install \
+ && apt-get -y --no-install-recommends install \
       curl \
       python3 \
       python3-pip \
