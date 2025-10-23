@@ -24,15 +24,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
  && apt-get -y --no-install-recommends install \
-      gcc \
-      make \
-      pkg-config \
       python3 \
       python3-dev \
       python3-pip \
       python3-venv \
-      unzip \
-      wget \
  && rm -rf /var/lib/apt/lists/*
 
 # Create and activate virtual environment.
@@ -76,6 +71,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
  && apt-get -y --no-install-recommends install \
       curl \
+      postgresql-common \
       python3 \
       python3-pip \
  && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
@@ -108,6 +104,8 @@ COPY ./rootfs /
 # Create path to mount to for input and output data
 
 RUN mkdir /data
+
+HEALTHCHECK CMD ["/app/healthcheck.sh"]
 
 # Make non-root container.
 
