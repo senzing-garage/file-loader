@@ -1,32 +1,91 @@
-ARG BASE_IMAGE=senzing/senzingapi-runtime:3.12.8@sha256:3663a1971e564af4d12ecdb0c90a4f46418b77dc229ec6c9f692efc59d1c67ae
-FROM ${BASE_IMAGE}
+ARG BASE_IMAGE=senzing/senzingapi-runtime:3.13.0@sha256:edca155d3601238fab622a7dd86471046832328d21f71f7bb2ae5463157f6e10
 
-ENV REFRESHED_AT=2025-07-28
+ARG IMAGE_NAME="senzing/file-loader"
+ARG IMAGE_MAINTAINER="support@senzing.com"
+ARG IMAGE_VERSION="1.3.7"
 
-LABEL Name="senzing/SzFileLoader" \
-      Maintainer="support@senzing.com" \
-      Version="1.3.6"
+# -----------------------------------------------------------------------------
+# Stage: builder
+# -----------------------------------------------------------------------------
+
+FROM ${BASE_IMAGE} AS builder
+
+# Set Shell to use for RUN commands in builder step.
+
+ENV REFRESHED_AT=2025-10-22
 
 # Run as "root" for system installation.
 
 USER root
 
-# Install packages via apt-get.
+# Install packages via apt.
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
  && apt-get -y --no-install-recommends install \
-      curl \
       python3 \
+      python3-dev \
       python3-pip \
- && apt-get clean \
+      python3-venv \
  && rm -rf /var/lib/apt/lists/*
 
-# Install packages via pip.
+# Create and activate virtual environment.
+
+RUN python3 -m venv /app/venv
+ENV PATH="/app/venv/bin:$PATH"
+
+# pip install Python dependencies.
 
 COPY requirements.txt .
 RUN pip3 install --upgrade pip \
  && pip3 install -r requirements.txt \
- && rm requirements.txt
+ && rm /requirements.txt
+
+# -----------------------------------------------------------------------------
+# Stage: Final
+# -----------------------------------------------------------------------------
+
+# Create the runtime image.
+
+FROM ${BASE_IMAGE} AS runner
+
+ARG IMAGE_NAME
+ARG IMAGE_MAINTAINER
+ARG IMAGE_VERSION
+
+ENV REFRESHED_AT=2025-10-22
+
+LABEL Name=${IMAGE_NAME} \
+      Maintainer=${IMAGE_MAINTAINER} \
+      Version=${IMAGE_VERSION}
+
+# Run as "root" for system installation.
+
+USER root
+
+# Install packages via apt.
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+ && apt-get -y --no-install-recommends install \
+      curl \
+      postgresql-common \
+      python3 \
+      python3-pip \
+ && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
+ && apt-get -y install postgresql-client-14 \
+ && rm -rf /var/lib/apt/lists/*
+
+# Copy python virtual environment from the builder image.
+
+COPY --from=builder /app/venv /app/venv
+
+# Activate virtual environment.
+
+ENV VIRTUAL_ENV=/app/venv
+ENV PATH="/app/venv/bin:${PATH}"
 
 # Install senzing_governor.py.
 
