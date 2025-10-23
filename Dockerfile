@@ -24,10 +24,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
  && apt-get -y --no-install-recommends install \
+      gcc \
+      make \
+      pkg-config \
       python3 \
       python3-dev \
       python3-pip \
       python3-venv \
+      unzip \
+      wget \
  && rm -rf /var/lib/apt/lists/*
 
 # Create and activate virtual environment.
@@ -70,15 +75,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
  && apt-get -y --no-install-recommends install \
-      gcc \
-      make \
-      pkg-config \
+      curl \
       python3 \
-      python3-dev \
       python3-pip \
-      python3-venv \
-      unzip \
-      wget \
  && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
  && apt-get -y install postgresql-client-14 \
  && rm -rf /var/lib/apt/lists/*
