@@ -39,8 +39,5 @@
     "stackoverflow",
     "venv"
   ],
-  "ignorePaths": [
-    ".git/**",
-    ".gitignore"
-  ]
+  "ignorePaths": [".git/**", ".gitignore"]
 }
