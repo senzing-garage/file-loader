@@ -26,6 +26,7 @@
     "pydev",
     "pydevproject",
     "pylint",
+    "pylintrc",
     "PYTHONPATH",
     "PYTHONUNBUFFERED",
     "redeor",
@@ -37,9 +38,13 @@
     "signum",
     "simplifiable",
     "stackoverflow",
+    "stdlib",
     "SUPPORTPATH",
     "venv",
     "WITHINFO"
   ],
-  "ignorePaths": [".git/**", ".gitignore"]
+  "ignorePaths": [
+    ".git/**",
+    ".gitignore"
+  ]
 }
