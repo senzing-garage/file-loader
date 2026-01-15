@@ -12,7 +12,7 @@ FROM ${BASE_IMAGE} AS builder
 
 # Set Shell to use for RUN commands in builder step.
 
-ENV REFRESHED_AT=2025-10-22
+ENV REFRESHED_AT=2026-01-15
 
 # Run as "root" for system installation.
 
@@ -54,7 +54,7 @@ ARG IMAGE_NAME
 ARG IMAGE_MAINTAINER
 ARG IMAGE_VERSION
 
-ENV REFRESHED_AT=2025-10-22
+ENV REFRESHED_AT=2026-01-15
 
 LABEL Name=${IMAGE_NAME} \
       Maintainer=${IMAGE_MAINTAINER} \

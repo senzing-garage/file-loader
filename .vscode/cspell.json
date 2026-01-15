@@ -33,6 +33,7 @@
     "noninteractive",
     "orjson",
     "pgdg",
+    "psutil",
     "psycopg",
     "pydev",
     "pydevproject",
@@ -67,8 +68,5 @@
     "WITHINFO",
     "zizmor"
   ],
-  "ignorePaths": [
-    ".git/**",
-    ".gitignore"
-  ]
+  "ignorePaths": [".git/**", ".gitignore"]
 }
