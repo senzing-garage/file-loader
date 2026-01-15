@@ -35,13 +35,15 @@
     "rootfs",
     "Senzing",
     "senzingapi",
+    "shellcheck",
     "signum",
     "simplifiable",
     "stackoverflow",
     "stdlib",
     "SUPPORTPATH",
     "venv",
-    "WITHINFO"
+    "WITHINFO",
+    "zizmor"
   ],
   "ignorePaths": [
     ".git/**",
