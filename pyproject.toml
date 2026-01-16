@@ -88,6 +88,9 @@ test = [
   "coverage==7.13.1; python_version > '3.11'",
 ]
 
+[tool.setuptools.packages.find]
+where = ["."]
+
 [tool.bandit]
 skips = ["B101"]
 

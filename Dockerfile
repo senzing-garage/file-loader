@@ -30,17 +30,18 @@ RUN apt-get update \
       python3-venv \
  && rm -rf /var/lib/apt/lists/*
 
-# Create and activate virtual environment.
+# Activate virtual environment.
 
 RUN python3 -m venv /app/venv
 ENV PATH="/app/venv/bin:$PATH"
 
-# pip install Python dependencies.
+COPY . /git-repository
+WORKDIR /git-repository
 
-COPY pyproject.toml .
+# Install packages via PIP.
+
 RUN python3 -m pip install --upgrade pip \
- && python3 -m pip install . \
- && rm pyproject.toml
+ && python3 -m pip install .
 
 # -----------------------------------------------------------------------------
 # Stage: Final
