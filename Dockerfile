@@ -12,7 +12,7 @@ FROM ${BASE_IMAGE} AS builder
 
 # Set Shell to use for RUN commands in builder step.
 
-ENV REFRESHED_AT=2025-10-22
+ENV REFRESHED_AT=2026-01-15
 
 # Run as "root" for system installation.
 
@@ -30,17 +30,18 @@ RUN apt-get update \
       python3-venv \
  && rm -rf /var/lib/apt/lists/*
 
-# Create and activate virtual environment.
+# Activate virtual environment.
 
 RUN python3 -m venv /app/venv
 ENV PATH="/app/venv/bin:$PATH"
 
-# pip install Python dependencies.
+COPY . /git-repository
+WORKDIR /git-repository
 
-COPY requirements.txt .
-RUN pip3 install --upgrade pip \
- && pip3 install -r requirements.txt \
- && rm /requirements.txt
+# Install packages via PIP.
+
+RUN python3 -m pip install --upgrade pip \
+ && python3 -m pip install .
 
 # -----------------------------------------------------------------------------
 # Stage: Final
@@ -54,7 +55,7 @@ ARG IMAGE_NAME
 ARG IMAGE_MAINTAINER
 ARG IMAGE_VERSION
 
-ENV REFRESHED_AT=2025-10-22
+ENV REFRESHED_AT=2026-01-15
 
 LABEL Name=${IMAGE_NAME} \
       Maintainer=${IMAGE_MAINTAINER} \
