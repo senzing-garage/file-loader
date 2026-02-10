@@ -4,6 +4,7 @@
   "words": [
     "abend",
     "analysing",
+    "antaenc",
     "applehelp",
     "autodoc",
     "autodocsumm",
@@ -25,6 +26,7 @@
     "isort",
     "jquery",
     "jsmath",
+    "kernelsam",
     "kwargs",
     "levelname",
     "LICENSESTRINGBASE",
@@ -68,5 +70,8 @@
     "WITHINFO",
     "zizmor"
   ],
-  "ignorePaths": [".git/**", ".gitignore"]
+  "ignorePaths": [
+    ".git/**",
+    ".gitignore"
+  ]
 }
