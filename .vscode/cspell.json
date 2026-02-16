@@ -70,8 +70,5 @@
     "WITHINFO",
     "zizmor"
   ],
-  "ignorePaths": [
-    ".git/**",
-    ".gitignore"
-  ]
+  "ignorePaths": [".git/**", ".gitignore"]
 }
