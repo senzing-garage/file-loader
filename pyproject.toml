@@ -23,7 +23,7 @@ changelog = "https://github.com/senzing-garage/file-loader/blob/main/CHANGELOG.m
 source = "https://github.com/senzing-garage/file-loader"
 
 [build-system]
-requires = ["setuptools>=80", "wheel"]
+requires = ["setuptools>=82.0.1", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [dependency-groups]
